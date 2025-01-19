@@ -76,8 +76,8 @@ kafka-console-consumer \
     --bootstrap-server kafka:9092 \
     --topic user-login-processed \
     --from-beginning
+```
     
-    ```
 
 Check invalid data : 
 ```
@@ -85,7 +85,26 @@ kafka-console-consumer \
     --bootstrap-server kafka:9092 \
     --topic user-login-errors \
     --from-beginning
-    ```    
+```
 
 ## Additional Questions
 
+1) How would you deploy this application in production?
+	•	Container Orchestration: Usually, Kubernetes is popular. You’d package the consumer and aggregator as separate deployments, each scaled as needed.
+	•	Managed Kafka: Many teams prefer hosted services like Confluent Cloud or Amazon MSK so they don’t manually manage Kafka clusters.
+	•	External Redis or Managed Cache: For aggregator state, you might use something like AWS ElastiCache for Redis.
+	•	CI/CD: Integrate Docker builds in your CI/CD pipeline (e.g., Jenkins, GitHub Actions), run tests, then deploy to staging and production environments.
+
+2) What other components would you want to add to make this production ready?
+	•	Schema Registry: Keep message formats versioned and consistent as data evolves.
+	•	Monitoring & Alerts: Tools like Prometheus/Grafana to watch consumer lag, aggregator performance, Redis usage, etc.
+	•	Security: Encrypt data in transit (SASL_SSL for Kafka) and use ACLs to limit producer/consumer access.
+	•	Error Analysis: The pipeline sends invalid data to user-login-errors. You could set up a dedicated service or workflow to analyze and handle these records further.
+
+3) How can this application scale with a growing dataset?
+   	•	Kafka Partitions: Increase partitions on the main topic (user-login), allowing multiple consumers to split the load.
+	•	Horizontal Scaling: Run multiple replicas of the consumer and aggregator in Kubernetes. Each consumer handles a subset of partitions.
+	•	Load Testing: Monitor consumer lag. If it grows, add more partitions or more consumer replicas to keep up.
+
+
+Submission for Daniel 
