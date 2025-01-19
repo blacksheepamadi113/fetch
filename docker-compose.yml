@@ -1,0 +1,96 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "22181:2181"
+    networks:
+      - kafka-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - kafka-network
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_INTERNAL://kafka:9092,LISTENER_EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_INTERNAL:PLAINTEXT,LISTENER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: my-redis
+    networks:
+      - kafka-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  my-python-producer:
+    # The key fix: specify 'platform: "linux/amd64"'
+    # so Docker knows to emulate the amd64 image on your arm64 host.
+    platform: "linux/amd64"
+    image: mpradeep954/fetch-de-data-gen
+    depends_on:
+      - kafka
+    restart: on-failure:10
+    ports:
+      - "9093:9093"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: user-login
+    networks:
+      - kafka-network
+
+  my-consumer:
+    build: ./consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafka-network
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      INPUT_TOPIC: user-login
+      PROCESSED_TOPIC: user-login-processed
+      ERROR_TOPIC: user-login-errors
+
+  my-aggregator:
+    build: ./aggregator
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kafka-network
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      PROCESSED_TOPIC: user-login-processed
+      GROUP_ID: aggregator-group
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+networks:
+  kafka-network:
+    driver: bridge
