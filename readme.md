@@ -9,7 +9,7 @@ This repository showcases a **fully working pipeline** that reads streaming data
    - [1) How would you deploy this application in production?](#1-how-would-you-deploy-this-application-in-production)  
    - [2) What other components would you want to add to make this production ready?](#2-what-other-components-would-you-want-to-add-to-make-this-production-ready)  
    - [3) How can this application scale with a growing dataset?](#3-how-can-this-application-scale-with-a-growing-dataset)  
-   - [All done, now what?](#all-done-now-what)
+  
 
 ---
 
